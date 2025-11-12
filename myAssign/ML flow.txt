@@ -11,10 +11,12 @@ terminal 1=
 
 terminal 2=
 source my_ml/bin/activate
+mlflow ui
 
 ml flow documentation > open source> getting started>our frist mlflow model >notebook>logging frist
 
 go jupiter>python3>paste >run 
 
 teminal 3=>
+
 hyperparameter tuning>paste second command >comamnd3> copy paste all command in notebook>
