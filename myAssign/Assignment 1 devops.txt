@@ -1,0 +1,748 @@
+Assignment 1 
+
+SET A
+
+#1)Create a Jenkins freestyle job to pull source code from a Git repository, build the project 
+using Maven, and archive the generated artifact. 
+use git Repository: https://github.com/hkhcoder/vprofile-project.git 
+branch: main 
+Steps to include: 
+● Create a new freestyle job. 
+● Configure the Git repository in the "Source Code Management" section. 
+● In the "Build" step, invoke the top-level Maven target (e.g., clean install). 
+● Add a "Post-build Action" to archive the artifacts (e.g., target/*.war). 
+
+ Create a Freestyle Project > Scroll to “Source Code Management”(Select Git)> in url enter repo> branch (main) > Scroll to “Build” section(Invoke top-level Maven targets) > Goals(clean install) > Add Post-Build Action(target/*.war) -> aply,save,build
+
+#2)2. Build a Jenkins freestyle project that automates the following tasks for a Maven project: 
+use git Repository: https://github.com/hkhcoder/vprofile-project.git 
+branch: main 
+● Pull the source code from the Git repository. 
+● Build the project using Maven to generate a .war file. 
+● Implement a strategy to version the .war file with the format projectname-build_id- 
+time_stamp.war and store it in a separate versions directory.
+
+all same-> build steps(Invoke top-level Maven targets)->Post-build artifacts(target/*.war)
+
+#3). Schedule above job to run periodically every 5 minutes. (i.e. Q2)
+
+before solving this que we want to confiure email=>
+manage Jenkins > system > Extended-Email > 
+SMTP server =smtp.gmail.com
+SMTP Port=465
+use ssl (check box)
+
+*Credential=>
+username with password
+scope=>Gloable
+username=email
+password=app password
+id(optional)
+
+click Configure > Go to “Build Triggers” Section >Tick  the option:
+Build periodically >schedule (H/5 * * * *) 
+
+#4)Edit above job to notify users via email whenever there is an unstable build. (i.e. Q2) 
+
+install email extention plugin 
+
+add post build action > editable email notification > form(your email) > Project Recipient List:(email you want to send) >content type(HTML)> Defalt Subject(Build ${BUILD_STATUS}: ${PROJECT_NAME} #${BUILD_NUMBER})>Default countent(```html)
+
+#5)
+
+
+-----------------------------------------------------------------------
+SET B
+1. Create a Jenkins freestyle job that automates the following for a Maven project: 
+use git Repository: https://github.com/hkhcoder/vprofile-project.git 
+branch: atom 
+● Pull the source code from a Git repository. 
+● Build the project using Maven. The build process should execute a series of goals, 
+including clean, package, and jacoco:report. 
+● Implement a conditional build step that runs unit tests with a code coverage 
+threshold. If code coverage falls below 70%, the build should be marked as unstable, 
+but not failed. 
+● Archive the generated .war file and the JaCoCo test reports. 
+● Implement a versioning strategy for the .war file using a combination of the project 
+name, the Jenkins build ID, and a custom build parameter (e.g., 
+RELEASE_VERSION). The final artifact should be named 
+projectname-RELEASE_VERSION-build_id.war and stored in a dedicated releases 
+directory.
+
+
+
+
+Q1)Step 1: Create the Freestyle Project
+On your Jenkins dashboard, click New Item.
+
+Enter a name for your job (e.g., vprofile-atom-build).
+
+Select Freestyle project and click OK.
+
+*Step 2: Configure General Settings (Build Parameter)
+In the General section, check the box for This project is parameterized.
+
+Click Add Parameter and select String Parameter.
+
+Enter the following:
+
+
+Name: RELEASE_VERSION 
+
+
+Default Value: 1.0.0 
+
+
+Description: Custom release version to tag the .war file 
+
+*Step 3: Configure Source Code Management (Git)
+Go to the Source Code Management section.
+
+Select Git.
+
+In Repositories, enter the following:
+
+
+Repository URL: https://github.com/hkhcoder/vprofile-project.git 
+
+In Branches to build, enter:
+
+
+Branch Specifier: */atom 
+
+*Step 4: Configure Build Steps (Maven & Shell)
+This section has two build steps, executed in order.
+
+Build Step A: Invoke Maven
+
+Go to the Build Steps section and click Add build step.
+
+Select Invoke top-level Maven targets.
+
+
+Maven Version: Choose your configured Maven (e.g., maven 3.9.10).
+
+
+Goals: clean package jacoco:report 
+
+Build Step B: Execute Shell (for Versioning)
+
+Click Add build step again.
+
+Select Execute shell.
+
+In the Command box, paste the following script. This script creates the releases directory and renames the file using Jenkins environment variables ($RELEASE_VERSION and $BUILD_ID).
+
+Bash
+
+# Create a directory for our release artifacts
+mkdir -p releases
+
+# Find the .war file in target, rename it, and move it
+# We use 'vprofile-project' as the projectname
+mv target/vprofile-project.war "releases/vprofile-project-${RELEASE_VERSION}-${BUILD_ID}.war"
+Step 5: Configure Post-build Actions
+This section has two post-build actions.
+
+
+*Step 5: Configure Post-build Actions
+This section has two post-build actions
+Action A: Record JaCoCo Report (and set unstable threshold)
+
+Go to the Post-build Actions section and click Add post-build action.
+
+Select Record JaCoCo coverage report.
+
+Fill in the paths as shown in the PDF.
+
+
+
+This is the critical step: Under the thresholds, check the box:
+
+
+☑ Change build status according to the defined thresholds 
+
+Set the minimum thresholds. This will mark the build as unstable if not met.
+
+
+Instruction: 70 
+
+Ensure all "Fail the build" thresholds are set to 0 and the "Fail the build..." checkbox  is unchecked.
+
+
+
+Action B: Archive the Artifacts
+
+Click Add post-build action again.
+
+Select Archive the artifacts.
+
+In the Files to archive box, enter the path to your newly named file. This must match the path from your shell script:
+
+releases/vprofile-project-${RELEASE_VERSION}-${BUILD_ID}.war
+
+(Optional) You can also add the JaCoCo reports here to archive them:
+
+target/site/jacoco/**
+
+*Step 6: Save
+Click Save or Apply
+
+--------------------my
+
+this project parameterized > name=RELEASE_VERSION,Default Value=1.0.0,check trim the string > Git > Repository URL=https://github.com/hkhcoder/vpro le-project.git , Credentials=- none - > Branches to build > Branch Speci er (blank for 'any') */atom > Build Steps(Invoke top-level Maven targets)=Maven Version(maven 3.9.10),Goals(clean package jacoco:report)>Post-build Actions(Record JaCoCo coverage report)>save
+
+
+Q2) Create a Jenkins freestyle job that extends the basic Docker workflow with more advanced 
+features: 
+● Configure the job to automatically trigger whenever new code is pushed to the main 
+branch of your Git repository using a Git SCM. 
+● Build a Docker image from a Dockerfile located in the repository. The build should 
+include passing environment variables (e.g., BUILD_ID, GIT_COMMIT) to the 
+Dockerfile as build arguments. 
+● Implement a multi-stage Docker build within the Dockerfile to produce a smaller, 
+optimized final image. 
+● Tag the built image with a dynamic tag that includes the Git commit hash and the 
+Jenkins build number (e.g., 
+your-dockerhub-username/your-app:git-commit-hash-build-id). 
+● Push the tagged image to Docker Hub. 
+● Configure email notifications to be sent to a specific user group for both unstable 
+and failed builds. The email body should include the build status, a link to the build 
+console output, and a list of changes from the last successful build. 
+ ----------------------------------
+Docker(Username=prajwaljadhav972@gmail.com , Password= Prajwalj509@ )
+before start config email and add docker credentials =>
+
+Go to Manage Jenkins > Credentials > System > Global credentials.>Click Add Credentials.>Kind: Username with password.>Username: your-dockerhub-username>
+Password: your-dockerhub-password-or-token>ID: dockerhub-creds (Remember this ID).>ok
+
+
+frestyle> Source Code Management(Git)>Repository URL(https://github.com/VedantYeola/node-app.git) > add credential if not added > branch(*/main) > triggers>poll SCM (H/2 * * * *) >Environment(Use secret text(s) or  le(s)) >Username Variable(DOCKER_USERNAME),Password Variable(DOCKER_PASSWORD)>build steps (Execute shell)> commands =
+
+#!/bin/bash
+set -e  # stop if any command fails
+
+# Variables
+IMAGE_NAME="prajwalj509/myapp"
+GIT_COMMIT=$(git rev-parse --short HEAD)
+BUILD_TAG="${BUILD_NUMBER}"
+FULL_TAG="${IMAGE_NAME}:${GIT_COMMIT}-${BUILD_TAG}"
+
+echo "Building image: ${FULL_TAG}"
+
+# Build Docker image with Jenkins environment variables
+docker build \
+  --build-arg BUILD_ID=${BUILD_ID} \
+  --build-arg GIT_COMMIT=${GIT_COMMIT} \
+  -t ${FULL_TAG} .
+
+# Optional: Tag latest
+docker tag ${FULL_TAG} ${IMAGE_NAME}:latest
+
+# Login to Docker Hub (credentials must be bound from Jenkins)
+echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+# Push image to Docker Hub
+docker push ${FULL_TAG}
+docker push ${IMAGE_NAME}:latest
+
+echo "Docker image pushed successfully!"
+
+                --------------------OR------------------ prfer 1
+
+#!/bin/bash
+set -e  # Exit immediately if a command fails  f
+
+# Variables
+IMAGE_NAME="prajwalj509/node-app2"
+GIT_COMMIT=$(git rev-parse --short HEAD)
+BUILD_TAG="${BUILD_NUMBER}"
+FULL_TAG="${IMAGE_NAME}:${GIT_COMMIT}-${BUILD_TAG}"
+
+echo "-------------------------------------------"
+echo "Building Docker Image: ${FULL_TAG}"
+echo "-------------------------------------------"
+
+# Build image with commit hash and build ID as tags
+docker build \
+  --build-arg BUILD_ID=${BUILD_ID} \
+  --build-arg GIT_COMMIT=${GIT_COMMIT} \
+  -t ${FULL_TAG} .
+
+# Optional: also tag latest
+docker tag ${FULL_TAG} ${IMAGE_NAME}:latest
+
+echo "-------------------------------------------"
+echo "Running container from built image..."
+echo "-------------------------------------------"
+
+# Stop and remove old container if exists
+docker stop node-app-server1 || true
+docker rm node-app-server1 || true
+
+# Run new container
+docker run -d --name node-app-server1 -p 5000:5000 ${FULL_TAG}
+
+echo "-------------------------------------------"
+echo "Logging in to Docker Hub..."
+echo "-------------------------------------------"
+
+# Login using Jenkins credentials (environment variables)
+echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+echo "-------------------------------------------"
+echo "Pushing image to Docker Hub..."
+echo "-------------------------------------------"
+
+docker push ${FULL_TAG}
+docker push ${IMAGE_NAME}:latest
+
+echo "-------------------------------------------"
+echo "Docker build and push completed successfully!"
+echo "Image: ${FULL_TAG}"
+echo "-------------------------------------------"
+
+post build action(E-mail Noti cation) >Recipients(prajwaljadhav972@gmail.com)>Send e-mail for every unstable build>  Save
+
+
+Q3) 3. Create two linked Jenkins jobs to demonstrate a basic CI/CD pipeline: 
+use git Repository: https://github.com/hkhcoder/vprofile-project.git 
+branch: main 
+I. 
+Job A (Build Job): 
+● Create a parameterized build job that takes a string parameter for 
+GIT_BRANCH and a choice parameter for BUILD_ENV (e.g., development, 
+staging). 
+● Pull code from the specified Git branch. 
+● Build the Maven project with a goal to generate a .jar or .war file. 
+● Archive the build artifact. 
+II. 
+Set C:  
+Job B (Deploy Job): 
+● Create a second parameterized job that is triggered after a successful build of 
+Job A. 
+● The deploy job should receive the BUILD_ID and BUILD_ENV parameters 
+from Job A. 
+● Copy the archived artifact from Job A's workspace to a designated 
+deployment directory. 
+
+-----> 
+(Deploy) 
+frestyle > This project is parameterized >String Parameter(Name
+BUILD_ID), Choice Parameter(Name=BUILD_ENV, Choices  =development 
+staging )
+> Source Code Management(none)>Build Steps(Copy artifacts from another project)
+>(Project name
+assignment1setBQ3(Build))
+>Which build
+
+Artifacts to copy
+target/*.war
+
+Artifacts not to copy(empty)
+
+Target directory=deploy_dir/ 
+
+check fingerprint artifact
+
+>Execute shell
+(my)
+#!/bin/bash
+echo "Deploying to ${BUILD_ENV} environment..."
+DEPLOY_DIR="/opt/deployments/${BUILD_ENV}"
+ARTIFACT=$(ls deploy_dir/*.jar)
+# Create deployment directory if it doesn't exist
+mkdir -p $DEPLOY_DIR
+# Copy the artifact
+cp $ARTIFACT $DEPLOY_DIR/
+# Custom logic for each environment
+if [ "$BUILD_ENV" == "development" ]; then
+echo "Deploying to Development Server..."
+# Example:
+# scp $ARTIFACT user@dev-server:/apps/
+# ssh user@dev-server "systemctl restart dev-app"
+elif [ "$BUILD_ENV" == "staging" ]; then
+echo "Deploying to Staging Server..."
+# Example:
+# scp $ARTIFACT user@staging-server:/apps/
+# ssh user@staging-server "systemctl restart staging-app"
+else
+    echo "Unknown environment"
+exit 1
+fi
+echo "Deployment completed."
+
+--------------
+#!/bin/bash
+set -e  # Exit if any command fails
+
+echo "Deploying to ${BUILD_ENV} environment..."
+
+# Define deployment directory
+DEPLOY_DIR="/opt/deployments/${BUILD_ENV}"
+
+# Create deployment directory if it doesn't exist
+mkdir -p "$DEPLOY_DIR"
+
+# Locate the artifact (.war file)
+ARTIFACT=$(ls target/*.war)
+
+if [ -z "$ARTIFACT" ]; then
+  echo "❌ No WAR file found in target/ directory!"
+  exit 1
+fi
+
+echo "Found artifact: $ARTIFACT"
+echo "Copying artifact to $DEPLOY_DIR..."
+cp "$ARTIFACT" "$DEPLOY_DIR/"
+
+# Custom logic for each environment
+if [ "$BUILD_ENV" == "development" ]; then
+  echo "Deploying to Development Server..."
+  # Example:
+  # scp "$ARTIFACT" user@dev-server:/apps/
+  # ssh user@dev-server "systemctl restart dev-app"
+
+elif [ "$BUILD_ENV" == "staging" ]; then
+  echo "Deploying to Staging Server..."
+  # Example:
+  # scp "$ARTIFACT" user@staging-server:/apps/
+  # ssh user@staging-server "systemctl restart staging-app"
+
+else
+  echo "Unknown environment: ${BUILD_ENV}"
+  exit 1
+fi
+
+echo "✅ Deployment completed successfully."
+-------------------------------------------
+
+> post build action>Build other projects> Projects to build
+(job_c_test) >select frist
+
+---------------------------------------------------
+(Build)
+frestyle>This project is parameterized>String Parameter(Name
+GIT_BRANCH,Default Value main) , Choice Parameter(Name=
+BUILD_ENV,Choices=
+development
+staging)
+
+>Source Code Management(git) >Repository URL
+https://github.com/hkhcoder/vpro le-project.git ,Credentials
+- none -      ,       
+Branches to build (Branch Speci er (blank for 'any')=
+*/atom ,Git executable=Default )
+
+>Build Steps (Invoke top-level Maven targets)>Maven Version(maven 3.9.10),Goals(clean package) >post-build Actions(Archive the artifacts)>Files to archive
+**/target/*.jar,**/target/*.war>Build other projects(Projects to build
+assignment1setBQ3(Deploy), select frist)
+
+>save
+
+                                          SETC
+
+1. Design, implement, and document a fully automated CI/CD free style job for a sample web 
+application using Jenkins. The free style job must leverage on-demand EC2 instances as 
+dynamic build agents to demonstrate elastic scaling.
+
+Step 0 — Prerequisites
+
+AWS account with permissions to create EC2 instances, IAM roles/policies, security groups, AMIs, and optionally S3/ECR.
+
+Jenkins master with:
+
+Amazon EC2 Plugin installed.
+
+Git plugin, Maven plugin, Credentials plugin, Email Extension plugin (if you want email).
+
+Jenkins master has an AWS credential with an IAM user (access key/secret) that can create/describe/terminate instances OR you can use an instance role if Jenkins runs on EC2.
+
+A key pair for SSH (or use AWS Systems Manager for SSH-less access).
+
+A base AMI (e.g., Amazon Linux 2) that you will customize into an agent AMI.
+
+Step 1 — Create IAM policy & role for Jenkins (master) to manage EC2
+
+Create an IAM policy allowing Jenkins to manage EC2 instances and describe resources. Example policy (trim to least privilege for production):
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EC2DescribeRun",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:RunInstances",
+        "ec2:TerminateInstances",
+        "ec2:DescribeInstances",
+        "ec2:DescribeImages",
+        "ec2:DescribeInstanceTypes",
+        "ec2:DescribeKeyPairs",
+        "ec2:DescribeSecurityGroups",
+        "ec2:CreateTags",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeRegions"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAMPassRoleIfUsed",
+      "Effect": "Allow",
+      "Action": ["iam:PassRole"],
+      "Resource": "arn:aws:iam::<ACCOUNT_ID>:role/<EC2InstanceRoleName>"
+    }
+  ]
+}
+
+
+Attach the policy to the IAM user or role Jenkins uses.
+
+If you plan to attach an IAM role to the EC2 agent (recommended to access S3/ECR), create that role separately and allow iam:PassRole for its ARN in the Jenkins policy.
+
+Step 2 — Prepare an agent AMI (or use cloud-init user-data)
+
+You can either create a custom AMI or use user-data that prepares the instance on first boot. The AMI must at least have Java installed (Jenkins agent needs Java). Below is a cloud-init user-data script that you can put into the EC2 template in Jenkins (or bake into an AMI).
+
+User-data (cloud-init) — sets up jenkins user and Java, adds public key for SSH
+
+#!/bin/bash
+set -e
+
+# Variables - replace with actual user/public key
+JENKINS_USER="jenkins"
+JENKINS_HOME="/home/${JENKINS_USER}"
+PUB_KEY="ssh-rsa AAAA...your-public-key... user@host"
+
+# Update packages & install java (Amazon Linux 2 example)
+yum update -y
+yum install -y java-17-amazon-corretto-headless git
+
+# Create jenkins user if not exists
+if ! id -u "${JENKINS_USER}" >/dev/null 2>&1; then
+  useradd -m -s /bin/bash "${JENKINS_USER}"
+fi
+
+# Setup SSH
+mkdir -p "${JENKINS_HOME}/.ssh"
+echo "${PUB_KEY}" > "${JENKINS_HOME}/.ssh/authorized_keys"
+chown -R "${JENKINS_USER}:${JENKINS_USER}" "${JENKINS_HOME}/.ssh"
+chmod 700 "${JENKINS_HOME}/.ssh"
+chmod 600 "${JENKINS_HOME}/.ssh/authorized_keys"
+
+# Ensure Docker (optional) - uncomment if you need Docker on agents
+# amazon-linux-extras install docker -y
+# systemctl enable docker
+# systemctl start docker
+# usermod -aG docker ${JENKINS_USER}
+
+# Create remote FS root
+mkdir -p /home/${JENKINS_USER}/agent
+chown -R ${JENKINS_USER}:${JENKINS_USER} /home/${JENKINS_USER}/agent
+
+# (Optional) Install other tools: maven, python, node etc.
+
+
+If you bake an AMI, run an EC2 instance, run similar setup, then create an image (AMI) from that instance to speed up provisioning.
+
+Step 3 — Security group & key pair
+
+Security Group for agent instances:
+
+Allow inbound SSH (port 22) only from Jenkins master IP.
+
+Allow other inbound ports only if needed.
+
+Outbound allowed to internet (for package install/push to Docker Hub/S3).
+
+Key pair: Use the private key from your pair if you use SSH-based connect. Jenkins can use the SSH private key credential to connect.
+
+Step 4 — Configure Jenkins Amazon EC2 Cloud (Jenkins UI)
+
+Jenkins -> Manage Jenkins -> Configure Clouds -> Add a new cloud -> Amazon EC2.
+
+Fill in:
+
+Amazon EC2 credentials: Use IAM access key (or role if Jenkins runs in AWS).
+
+Region: e.g., ap-south-1 or us-east-1.
+
+AMI ID: AMI you prepared (or use public Amazon Linux 2 AMI).
+
+Instance Type: e.g., t3.small.
+
+Security Groups: the SG you created.
+
+Key Pair Name: the key pair you created.
+
+Remote FS root: /home/jenkins/agent (matching user-data).
+
+Labels: e.g., ec2-agent (used in job restriction).
+
+Instance Cap: maximum number of concurrent EC2 agents, e.g., 5.
+
+Idle termination: e.g., 5 minutes (terminate when idle for 5 minutes).
+
+Optionally set Use ephemeral AMI user-data: paste the cloud-init (from Step 2) if not baked into AMI.
+
+Launch method:
+
+Choose Launch agent via SSH.
+
+Configure Credentials: Add an SSH username/password or username + private key credential for jenkins user. (Add in Jenkins Manage Credentials -> Global).
+
+Test connection (you may need to run a test by launching an instance manually).
+
+Save cloud config.
+
+Step 5 — Create the Freestyle Job that uses EC2 agents
+
+Create a Freestyle job and restrict it to run on EC2 label.
+
+New Item → Freestyle project → name: elastic-ci-build.
+
+General:
+
+Check This build is parameterized (optional).
+
+Restrict where this project can be run:
+
+Put Label Expression: ec2-agent (the label you set in the EC2 template).
+
+Source Code Management:
+
+Git -> Repository: https://github.com/hkhcoder/vprofile-project.git
+
+Branch: */main
+
+Build Triggers:
+
+Optionally: GitHub hook trigger for GITScm polling to auto-start on pushes.
+
+Build Environment:
+
+If you need to bind Docker or other creds, add them here.
+
+Build Steps:
+
+Example for a Maven build:
+
+#!/bin/bash
+set -e
+echo "Running on node: $(hostname)"
+echo "Workspace: ${WORKSPACE}"
+
+# Build with Maven
+mvn -B clean package
+
+# show artifact
+ls -l target/
+
+
+Post-build Actions:
+
+Archive artifacts: target/*.war (or target/*.jar).
+
+Optional: upload artifact to S3 or copy to deployment server.
+
+Optional: Send email on failure/unstable (Editable Email Notification plugin).
+
+Save the job.
+
+When you click Build Now, Jenkins will:
+
+Recognize no idle ec2-agent online, ask the cloud plugin to provision an EC2 agent,
+
+Wait for SSH connection and successful launch,
+
+Run the job on the agent,
+
+Terminate agent after idle timeout.
+
+Step 6 — Credential setup (quick pointers)
+
+AWS credentials: (If Jenkins master is outside EC2) Manage Jenkins → Manage Credentials → Add AWS credentials (Access Key ID / Secret Key). Amazon EC2 plugin will use them.
+
+SSH credentials: Add Username with private key credential for jenkins user which the EC2 template will use.
+
+DockerHub / S3 creds: add as secret text/username & password values.
+
+Step 7 — Example: email & artifact notifications
+
+Install/enable Email Extension plugin.
+
+Post-build action -> Editable Email Notification:
+
+Recipients: devteam@example.com
+
+Triggers: Failure, Unstable
+
+Content Type: HTML
+
+Default Subject: Build ${BUILD_STATUS}: ${PROJECT_NAME} #${BUILD_NUMBER}
+
+Default Content:
+
+<p><b>Project:</b> ${PROJECT_NAME}</p>
+<p><b>Build Number:</b> ${BUILD_NUMBER}</p>
+<p><b>Status:</b> ${BUILD_STATUS}</p>
+<p><b>Console:</b> <a href="${BUILD_URL}console">${BUILD_URL}console</a></p>
+<p><b>Changes since last success:</b><br/>${CHANGES_SINCE_LAST_SUCCESS}</p>
+
+Step 8 — Test & Verification checklist
+
+Manual test:
+
+Go to Job -> Build Now.
+
+In Jenkins build console you should see provisioning logs like “Launching EC2 instance…”, SSH connect, and then the build logs.
+
+After build finishes, confirm artifact archived.
+
+Push test:
+
+Push a commit to main.
+
+If you configured GitHub webhook to Jenkins, job should auto-trigger and provision EC2 agent.
+
+Verify autoscaling:
+
+Launch concurrent builds (increase concurrent builds or run multiple jobs) and watch Jenkins spin up more EC2 agents up to your instance cap.
+
+After idle timeout, confirm EC2 instances are terminated.
+
+Agent logs:
+
+On AWS Console -> EC2 -> Instances, view system logs or connect via private key to inspect /var/log/cloud-init-output.log for user-data execution.
+
+Cleanup (important for practical/demo)
+
+Delete job(s) in Jenkins.
+
+Remove EC2 cloud template and credentials.
+
+Terminate any running EC2 instances and delete the AMI (if you created one).
+
+Revoke IAM credentials or delete IAM user/policy if used just for the demo.
+
+Example: Full Shell Script you can paste into the Freestyle job (build step)
+#!/bin/bash
+set -e
+
+echo "===== Running build on $(hostname) ====="
+echo "User: $(whoami)"
+echo "Workspace: ${WORKSPACE}"
+
+# Build
+mvn -B -DskipTests clean package
+
+# Archive check
+echo "Artifacts in target/:"
+ls -la target || true
+
+
+
+
+
+

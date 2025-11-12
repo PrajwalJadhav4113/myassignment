@@ -1,0 +1,1009 @@
+Q1)
+1. Create a new Jenkins Pipeline job and configure it to use a Jenkinsfile with the following 
+specifications: 
+use git Repository: https://github.com/hkhcoder/vprofile-project.git 
+branch: main 
+A. Pipeline Configuration: 
+● The pipeline must run on an agent with the label builtinubuntu. 
+● It must specify the use of maven "maven 3.9.10" and jdk "openjdk 21.0.7" 
+from the global tool configurations. 
+B. Stage Implementation (in this specific order): 
+● Stage 1: fetch code 
+This stage should clone the specified Git repository and branch. 
+● Stage 2: unit test 
+This stage should compile the code and run all unit tests using the Maven 
+command: sh 'mvn test'. 
+44 
+Dept. of Comp. Sci., S. P. College, Pune                                                                                                                     
+● Stage 3: build the code 
+This stage should package the application into a .war file without running the 
+tests again. Use the command: sh 'mvn package -DskipTests'. 
+● Stage 4: archive the artifact 
+This stage should find and archive the generated .war file. Use the 
+archiveArtifacts step to save **/*.war. 
+● Stage 5: deploy to staging 
+This stage should only run if all previous stages have succeeded. 
+Simulate a deployment by printing a message to the console: echo 
+'Deploying artifact to staging server.'. 
+C. Failure Handling: 
+● Implement a pipeline-level post block that triggers only on failure. 
+● If any stage fails, the pipeline should execute a shell command to print the 
+message: echo 'Build failed. Notifying the development team.'. 
+
+==>
+1. Create a New Pipeline Job
+
+Go to Jenkins Dashboard → New Item → enter name (e.g., vprofile-pipeline)
+Choose Pipeline, click OK. =>  
+
+2. In Pipeline Configuration:
+Scroll down to Pipeline section.
+
+Choose Pipeline script from SCM.
+SCM: Git
+Repository URL: https://github.com/hkhcoder/vprofile-project.git
+Branch: */main
+Script Path: Jenkinsfile (if saved as Jenkinsfile in repo) =>
+
+3. Global Tool Configuration:
+Go to Manage Jenkins → Tools.
+Under Maven installations, add → Name: maven 3.9.10, set path or install automatically.
+Under JDK installations, add → Name: openjdk 21.0.7, set path or install automatically.=>
+
+4. Label your agent:
+Make sure a Jenkins node (or controller) has the label builtinubuntu.
+Manage Jenkins → Nodes → Configure node → Add label: builtinubuntu.
+
+\\\\\\\\\\\\\\\\\\\\\\\\\code//////////////////
+pipeline {
+    agent { label 'builtinubuntu' }             //agent any
+
+
+    tools {
+        maven 'maven 3.9.10'
+        jdk 'openjdk 21.0.7'
+    }
+
+    stages {
+        stage('Fetch Code') {
+            steps {
+                echo 'Cloning the repository...'
+                git branch: 'main', url: 'https://github.com/hkhcoder/vprofile-project.git'
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                echo 'Running unit tests...'
+                sh 'mvn test'
+            }
+        }
+
+        stage('Build the Code') {
+            steps {
+                echo 'Building the application...'
+                sh 'mvn package -DskipTests'
+            }
+        }
+
+        stage('Archive the Artifact') {
+            steps {
+                echo 'Archiving the .war file...'
+                archiveArtifacts artifacts: '**/*.war', fingerprint: true
+            }
+        }
+
+        stage('Deploy to Staging') {
+            steps {
+                echo 'Deploying artifact to staging server...'
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo 'Build failed. Notifying the development team.'
+            sh 'echo "Build failed. Notifying the development team."'
+        }
+    }
+}
+----------------------------
+Q2) Automate the process of building and testing a simple Node.js application using Jenkins 
+Pipeline and Docker.Write a Jenkins Declarative Pipeline that performs the following tasks: 
+use GitHub repository:  https://github.com/ajay-raut/spnodeserver.git 
+branch: main 
+● Uses the agent builtin. 
+● Fetches the application code from the GitHub repository: 
+● Builds a Docker image named my-node-app. 
+● Runs a container from the built image with the name nodeserver on port 5000. 
+● Waits for 10 seconds and then stops and removes the container. 
+● Displays the running containers list before stopping. 
+● On pipeline failure, automatically sends an email notification to the developer at 
+username@gmail.com with build details.
+
+---->
+(optional)1) Prerequisites (on the Jenkins host)
+
+1} Install Docker on the machine that will run the pipeline (the Jenkins agent that will execute Docker commands).
+
+Ubuntu example:
+sudo apt update
+sudo apt install -y apt-transport-https ca-certificates curl gnupg lsb-release
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io
+
+2.Make sure the jenkins user can run Docker (so Jenkins doesn't need sudo):
+sudo usermod -aG docker jenkins
+# Then restart Jenkins or logout/login the jenkins service, e.g.:
+sudo systemctl restart jenkins
+
+3.Ensure Jenkins has the Pipeline plugin installed (usually default). Also install Email Extension Plugin if you want extended email features.
+Jenkins → Manage Jenkins → Manage Plugins → Available → search & install:
+Pipeline: Groovy
+Email Extension Plugin (emailext)
+
+2}Configure Node Label builtin
+
+(Your pipeline uses agent { label 'builtin' } — assign that label to whichever node should run the pipeline.)
+Jenkins → Manage Jenkins → Manage Nodes and Clouds → Click the node you want to use (e.g., Master or your agent).
+Configure → Labels → add builtin → Save.
+Alternatively change the pipeline to agent any if you don’t want to manage labels.
+
+3} Configure Email (SMTP) in Jenkins
+
+Example: Gmail (requires app password if using Google account)
+
+Jenkins → Manage Jenkins → Configure System → Extended E-mail Notification (or E-mail Notification).
+Fill settings:
+SMTP server: smtp.gmail.com
+Default user e-mail suffix: @gmail.com (optional)
+Use SMTP Authentication: YES → your.email@gmail.com and app password
+SMTP port: 587
+Use SSL: no, Use TLS: yes (or enable both depending on plugin UI)
+Test: use “Test configuration by sending test e-mail” to username@gmail.com.
+If using company SMTP, put those server details and credentials instead.
+
+4} 4) Create Credentials (optional)
+
+If you need to store Docker Hub or other credentials, Jenkins → Credentials → System → Add Credentials.
+
+5}Create the Pipeline Job
+
+Jenkins Dashboard → New Item → give a name (e.g., node-docker-pipeline) → choose Pipeline → OK.
+
+Under General (optional): add description.
+
+Under Build Triggers (optional): enable SCM polling or webhook as needed.
+
+Under Pipeline:
+
+Option A — Pipeline script from SCM:
+
+SCM: Git
+
+Repository URL: https://github.com/ajay-raut/spnodeserver.git
+
+Branch: */main
+
+Script Path: Jenkinsfile (if you add Jenkinsfile to the repo)
+
+Option B — Pipeline script:
+
+Paste the Jenkinsfile content (below) into the pipeline script box.
+
+////////////code\\\\\\\\\\\
+
+pipeline {
+    agent { label 'builtinnode' }
+
+    stages {
+        stage('Fetch Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/ajay-raut/spnodeserver.git'
+            }
+        }
+
+        stage('Build Docker image') {
+            steps {
+                sh 'docker build -t node-server-app .'
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                script {
+                    sh 'docker run --name nodeServer -p 5000:5000 -itd node-server-app'
+                    sleep 120
+                    sh 'docker ps'
+                    sh 'docker stop nodeServer'
+                    sh 'docker rm nodeServer'
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            mail to: 'ajayraut2500@gmail.com',
+                 subject: "Jenkins Build Failed: ${currentBuild.fullDisplayName}",
+                 body: """\
+                    Build URL: ${env.BUILD_URL}
+                    Build Status: ${currentBuild.currentResult}
+                    Please check the Jenkins job for more details.
+                 """
+        }
+    }
+}
+                                     OR
+
+pipeline {
+    agent { label 'builtin' }  // ✅ or use 'any' if no label setup
+
+    stages {
+        stage('Fetch Code') {
+            steps {
+                echo 'Cloning Node.js repository...'
+                git branch: 'main', url: 'https://github.com/ajay-raut/spnodeserver.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image...'
+                sh 'docker build -t node-server-app .'
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                script {
+                    echo 'Running Node.js container...'
+                    sh 'docker run --name nodeServer -p 5000:5000 -d node-server-app'
+                    echo 'Waiting 10 seconds for container to start...'
+                    sleep 10
+                    echo 'Listing running containers...'
+                    sh 'docker ps'
+                    echo 'Stopping and removing container...'
+                    sh '''
+                        docker stop nodeServer || true
+                        docker rm nodeServer || true
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            mail to: 'ajayraut2500@gmail.com',
+                 subject: "Jenkins Build Failed: ${currentBuild.fullDisplayName}",
+                 body: """\
+Build URL: ${env.BUILD_URL}
+Build Status: ${currentBuild.currentResult}
+Please check Jenkins for details.
+"""
+        }
+    }
+}
+
+-------------------------------------
+Q3)
+securely run a PostgreSQL container inside a Jenkins Declarative Pipeline. 
+Write a Jenkins Pipeline with the following requirements: 
+● Use the agent builtin. 
+● In the pipeline, run a Docker container named some-postgres using the official 
+postgres image. 
+45 
+Dept. of Comp. Sci., S. P. College, Pune                                                                                                                     
+● The container should be started with an environment variable 
+POSTGRES_PASSWORD, but the password must not be hardcoded in the pipeline. 
+Instead: 
+○ Store the password in Jenkins credentials with ID postgres-password. 
+○ Use withCredentials to securely inject the password into the pipeline. 
+● Ensure the container runs in detached mode (-d). 
+
+--->
+
+step 0}
+🔐 Setup Jenkins Credentials
+
+Before running the pipeline, do this once:
+
+Go to Manage Jenkins → Credentials → Global → Add Credentials
+
+Select:
+
+Kind: Secret text
+
+Secret: enter your PostgreSQL password (e.g., myStrongPassword123)
+
+ID: postgres-password
+
+Description: “PostgreSQL Password for Jenkins pipeline”
+
+Click OK ✅
+
+step1}Create the pipeline job (Option: Pipeline script)
+
+Jenkins Dashboard → New Item → name (e.g., run-postgres-secure) → choose Pipeline → OK.
+
+In job config → Pipeline section:
+
+Definition: Pipeline script
+
+Script: paste the Jenkinsfile below (see next section).
+
+Save.
+
+//////code////
+pipeline {
+    agent { label 'builtin' }  // Use 'builtinubuntu' if that's your Jenkins agent label
+
+    stages {
+        stage('Run Docker Container with Secure Password') {
+            steps {
+                script {
+                    // Inject password securely from Jenkins credentials
+                    withCredentials([string(credentialsId: 'postgres-password', variable: 'POSTGRES_PASSWORD')]) {
+                        // Run Postgres container securely
+                        sh """
+                            docker run -d \
+                              --name postgres-server \
+                              -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
+                              -p 5432:5432 \
+                              postgres
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Verify Running Containers') {
+            steps {
+                echo 'Listing running Docker containers...'
+                sh 'docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"'
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up container...'
+            sh '''
+                docker stop postgres-server || true
+                docker rm postgres-server || true
+            '''
+        }
+    }
+}
+
+------------------------
+Q4)
+pplication.Create a Jenkins pipeline that performs the following tasks: 
+use GitHub repository: https://github.com/hkhcoder/vprofile-project.git 
+branch: main 
+Use the agent whis is aws ec2 cloud agent. 
+● Configure tools: 
+○ Maven version 3.9.10. 
+○ JDK version openjdk 21.0.7. 
+● Fetch the source code from the GitHub repository: 
+https://github.com/hkhcoder/vprofile-project.git (branch: main). 
+● Build the project using Maven with the command: 
+● Create a directory named versions (if it does not exist). 
+● Copy the generated WAR file (target/vprofile-v2.war) into the versions directory 
+with a filename format: 
+● Run unit tests using Maven. 
+
+--->
+🪜 Step 0: Prerequisites
+
+Before writing the pipeline, make sure:
+Jenkins is already configured to use AWS EC2 agents (via EC2 plugin).
+Jenkins has the following tools configured:
+Maven 3.9.10 (Manage Jenkins → Global Tool Configuration → Maven)
+JDK 21 (openjdk 21.0.7)
+Jenkins can connect to GitHub (you can clone the repo manually from that node).
+Docker is not required for this question (just Maven build).
+
+Step 1: Create a New Pipeline Job
+
+Open Jenkins Dashboard → New Item → Pipeline
+
+Name it something like vprofile-build-pipeline
+
+Choose Pipeline → Click OK
+
+Step 2: Pipeline Script
+pipeline {
+    agent { label 'ec2-agent' }   // Replace with your EC2 agent label
+
+    tools {
+        maven 'Maven_3.9.10'      // The name as configured in Jenkins
+        jdk 'openjdk_21.0.7'      // The name as configured in Jenkins
+    }
+
+    environment {
+        // Optional variables if you want custom paths
+        BUILD_DIR = "versions"
+    }
+
+    stages {
+
+        stage('Checkout Source') {
+            steps {
+                git branch: 'main', url: 'https://github.com/hkhcoder/vprofile-project.git'
+            }
+        }
+
+        stage('Build Project') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Create Versions Directory') {
+            steps {
+                script {
+                    sh '''
+                        if [ ! -d "${BUILD_DIR}" ]; then
+                            mkdir ${BUILD_DIR}
+                        fi
+                    '''
+                }
+            }
+        }
+
+        stage('Copy WAR File') {
+            steps {
+                script {
+                    sh '''
+                        cp target/vprofile-v2.war ${BUILD_DIR}/vprofile-$(date +%Y%m%d%H%M%S).war
+                    '''
+                }
+            }
+        }
+
+        stage('Run Unit Tests') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Build and test completed successfully!"
+        }
+        failure {
+            echo "❌ Build failed. Please check logs."
+        }
+    }
+}
+
+Step 3: Verify Labels and Tool Names
+
+Check your EC2 agent label in Manage Nodes (replace 'ec2-agent' if needed).
+
+Ensure Maven and JDK names in the tools block exactly match Jenkins’ configured tool names.
+
+Example: maven 'Maven_3.9.10' should match the name shown in Jenkins UI.
+
+4: Run the Pipeline
+
+Click Build Now
+
+Jenkins will:
+
+Launch an EC2 agent dynamically.
+
+Checkout the repo.
+
+Build the WAR file with Maven.
+
+Create versions/ folder.
+
+Copy the WAR file with timestamp.
+
+Run unit tests.
+
+--------------------------------- Set B: 
+
+Q1) 
+1. implement a Jenkins Declarative Pipeline that integrates Maven build, unit testing, and 
+Slack notifications. 
+use GitHub repository: https://github.com/hkhcoder/vprofile-project.git 
+branch: main 
+Create a Jenkins Pipeline with the following requirements: 
+● Use the agent labeled builtinubuntu. 
+● Configure tools: 
+○ Maven version 3.9.10 
+○ JDK version openjdk 21.0.7 
+● Stages:
+○ Fetch code: Clone the repository 
+https://github.com/hkhcoder/vprofile-project.git (branch: main). 
+○ Build the code: 
+■ Run mvn clean package -DskipTests. 
+■ Create a folder named versions (if it doesn’t exist). 
+■ Copy the generated vprofile-v2.war file into the versions directory 
+with the format: 
+■ Unit test: Execute unit tests with mvn test. 
+Configure a Slack notification in the post section that: 
+● Sends a message to the channel #jenkinsserver. 
+● Uses a color code based on build result (SUCCESS = green, FAILURE = red, 
+UNSTABLE = yellow). 
+● Sends a message in the format: 
+
+---->
+Step 0} – Prerequisites
+
+Before writing the code, confirm these setup items in Jenkins:
+
+Agent setup
+
+A node (agent) exists with the label builtinubuntu.
+
+Jenkins master can run jobs on that agent.
+
+Tool configuration
+Go to Manage Jenkins → Global Tool Configuration and add:
+
+Maven 3.9.10 (name: Maven_3.9.10)
+
+JDK 21 (name: openjdk_21.0.7)
+
+Slack integration
+
+Install Slack Notification Plugin in Jenkins.
+
+Go to Manage Jenkins → Configure System → Slack
+
+Add your workspace and channel #jenkinsserver.
+
+Set Integration Token Credential ID, e.g. slack-token.
+
+Test with Test Connection (should say “success”).
+
+Step 1 }– Create New Pipeline Job
+
+Dashboard → New Item → Pipeline
+
+Name it: vprofile-slack-pipeline
+
+Choose Pipeline, click OK
+
+Step 2 }– Pipeline Script
+
+
+pipeline {
+    agent { label 'builtinubuntu' }
+
+    tools {
+        maven 'Maven_3.9.10'
+        jdk 'openjdk_21.0.7'
+    }
+
+    environment {
+        BUILD_DIR = "versions"
+        SLACK_CHANNEL = '#jenkinsserver'
+    }
+
+    stages {
+
+        stage('Fetch Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/hkhcoder/vprofile-project.git'
+            }
+        }
+
+        stage('Build Code') {
+            steps {
+                sh '''
+                    mvn clean package -DskipTests
+                    if [ ! -d "${BUILD_DIR}" ]; then
+                        mkdir ${BUILD_DIR}
+                    fi
+                    cp target/vprofile-v2.war ${BUILD_DIR}/vprofile-$(date +%Y%m%d%H%M%S).war
+                '''
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+    }
+
+    post {
+        success {
+            slackSend(
+                channel: "${SLACK_CHANNEL}",
+                color: '#00FF00',
+                message: "✅ *SUCCESS:* Job '${env.JOB_NAME}' build #${env.BUILD_NUMBER} succeeded.\nCheck: ${env.BUILD_URL}"
+            )
+        }
+        unstable {
+            slackSend(
+                channel: "${SLACK_CHANNEL}",
+                color: '#FFFF00',
+                message: "⚠️ *UNSTABLE:* Job '${env.JOB_NAME}' build #${env.BUILD_NUMBER} is unstable.\nCheck: ${env.BUILD_URL}"
+            )
+        }
+        failure {
+            slackSend(
+                channel: "${SLACK_CHANNEL}",
+                color: '#FF0000',
+                message: "❌ *FAILURE:* Job '${env.JOB_NAME}' build #${env.BUILD_NUMBER} failed.\nCheck: ${env.BUILD_URL}"
+            )
+        }
+    }
+}
+
+
+Step 3 }– Verify and Run
+
+Ensure the Slack credential and channel name are correct.
+
+Click Build Now.
+
+You’ll see:
+
+Git fetch → Maven build → WAR copied → Tests run.
+
+Slack message sent to #jenkinsserver with green/yellow/red color.
+
+
+Q2). Create a Jenkins Declarative Pipeline to automate building and pushing a Docker image to 
+Docker Hub. 
+use GitHub repository: https://github.com/ajay-raut/spnodeserver.git 
+branch: main 
+A. Write a Jenkins Pipeline that performs the following tasks: 
+● Use the agent labeled builtinubuntu. 
+● Define a credentials ID named docker-hub-credentials in Jenkins that stores 
+your Docker Hub username and password/token. 
+● Fetch code from the repository: 
+https://github.com/ajay-raut/spnodeserver.git (branch: main). 
+● Build the Docker image: 
+○ Use credentials binding to securely inject Docker Hub username and 
+password. 
+○ Build the image with a tag in the format: 
+● Push the image to Docker Hub: 
+Authenticate to Docker Hub using the stored credentials. 
+Tag the image with both: 
+:latest 
+:<BUILD_NUMBER> (Jenkins build number) 
+● Push both tags to Docker Hub. 
+
+==>
+
+
+Step 1 }— Add Docker Hub Credentials
+
+Go to:
+Jenkins → Manage Jenkins → Credentials → System → Global credentials → Add Credentials
+
+Kind: Username with password
+
+ID: docker-hub-credentials ✅
+
+Username: (your Docker Hub username)
+
+Password: (your Docker Hub password or access token)
+
+Click Save.
+
+Step 2 }— Create the Pipeline Job
+
+From the Jenkins dashboard → New Item
+
+Enter a name, e.g. DockerHub-Pipeline
+
+Choose Pipeline → Click OK
+
+In Pipeline section → Choose:
+
+Definition: Pipeline script
+
+Paste the Jenkinsfile code (below)
+
+Step 3 }— Jenkinsfile
+
+pipeline {
+    agent { label 'builtinubuntu' }
+
+    environment {
+        IMAGE_NAME = "your_dockerhub_username/spnodeserver"   // Replace with your Docker Hub repo name
+    }
+
+    stages {
+        stage('Fetch Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/ajay-raut/spnodeserver.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', 
+                                                    usernameVariable: 'DOCKER_USER', 
+                                                    passwordVariable: 'DOCKER_PASS')]) {
+                        sh '''
+                            echo "Logging into Docker Hub..."
+                            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+
+                            echo "Building Docker image..."
+                            docker build -t $IMAGE_NAME:latest .
+
+                            echo "Tagging image with build number..."
+                            docker tag $IMAGE_NAME:latest $IMAGE_NAME:${BUILD_NUMBER}
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', 
+                                                    usernameVariable: 'DOCKER_USER', 
+                                                    passwordVariable: 'DOCKER_PASS')]) {
+                        sh '''
+                            echo "Pushing images to Docker Hub..."
+                            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                            docker push $IMAGE_NAME:latest
+                            docker push $IMAGE_NAME:${BUILD_NUMBER}
+                        '''
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Build and push completed successfully!"
+        }
+        failure {
+            echo "❌ Build failed! Please check logs."
+        }
+    }
+}
+
+
+
+
+Q3) implement a Jenkins Declarative Pipeline that builds, tests, and analyzes a Java project with 
+code quality checks. 
+use GitHub repository: https://github.com/hkhcoder/vprofile-project.git 
+branch: atom 
+A. Write a Jenkins Pipeline that performs the following steps: 
+● Use the agent labeled builtinubuntu. 
+● Configure tools: 
+○ Maven version 3.9.10 
+○ JDK version openjdk 21.0.7 
+Dept. of Comp. Sci., S. P. College, Pune                                                                                                                     
+47 
+B. Pipeline stages must include: 
+● Fetch code: Clone the GitHub repository: 
+https://github.com/hkhcoder/vprofile-project.git (branch: atom). 
+● Build: 
+Run mvn install -DskipTests. 
+On success, archive the generated WAR file (target/*.war). 
+● Unit Test: Run mvn test to execute tests. 
+● Checkstyle Analysis: Run mvn checkstyle:checkstyle and generate a report. 
+● SonarQube Analysis: 
+○ Use SonarQube scanner tool (sonarscaner720). 
+○ Configure withSonarQubeEnv('sonarserver'). 
+○ Run code analysis with parameters: 
+○ Project key: jenkins 
+○ Sources: src/ 
+○ Binaries: target/test-classes/com/visualpathit/account/controllerTest/ 
+○ Reports: JUnit (target/surefire-reports/), Jacoco (target/jacoco.exec), 
+Checkstyle (target/checkstyle-result.xml) 
+● Quality Gate: Wait for SonarQube Quality Gate result and abort the pipeline 
+if it fails.
+
+----->
+Step 1 — System Requirements
+
+Make sure your system has:
+
+🐧 Ubuntu (or any Linux machine / EC2 instance)
+
+☕ Java 17 or later (SonarQube needs JDK 17+)
+
+🐳 Docker installed (we’ll use Docker-based SonarQube)
+
+🧱 Jenkins already running
+
+🚀 Step 2 — Run SonarQube in Docker
+
+Run these commands on your Jenkins host or EC2 instance terminal:
+
+# Pull SonarQube image
+docker pull sonarqube:lts-community
+
+# Run container
+docker run -d \
+  --name sonarqube \
+  -p 9000:9000 \
+  sonarqube:lts-community
+
+
+Explanation:
+
+-d → detached mode
+
+-p 9000:9000 → exposes SonarQube on port 9000
+
+You can now open:
+👉 http://<your-server-ip>:9000
+
+🧠 Default credentials:
+
+Username: admin
+Password: admin
+
+🪪 Step 3 — Create a Token for Jenkins in SonarQube
+
+Login to SonarQube (http://localhost:9000 or http://<EC2-IP>:9000)
+
+Click your profile (top right) → My Account → Security
+
+Under Generate Tokens, add a name like jenkins-token
+
+Copy the generated token (important — it shows only once)
+
+🔐 Step 4 — Add SonarQube Token to Jenkins
+
+Go to Jenkins → Manage Jenkins → Credentials → System → Global
+
+Click Add Credentials
+
+Kind: Secret Text
+
+Secret: paste the SonarQube token
+
+ID: sonarqube-token
+
+Save ✅
+
+⚙️ Step 5 — Configure SonarQube Server in Jenkins
+
+Go to Manage Jenkins → System
+
+Scroll down to SonarQube Servers
+
+Click Add SonarQube
+
+Name: sonarserver
+
+Server URL: http://localhost:9000
+(or http://<EC2-IP>:9000)
+
+Server authentication token: choose your sonarqube-token credential
+
+Save ✅
+
+🔧 Step 6 — Install Sonar Scanner Tool in Jenkins
+
+Go to Manage Jenkins → Global Tool Configuration
+
+Scroll down to SonarQube Scanner
+
+Click Add SonarQube Scanner
+
+Name: sonarscanner720
+
+Select Install automatically
+
+Save ✅
+
+Step 7 — Update Your Jenkinsfile
+
+pipeline {
+    agent { label 'builtinubuntu' }
+
+    tools {
+        maven 'Maven_3.9.10'
+        jdk 'openjdk_21.0.7'
+    }
+
+    environment {
+        SONAR_PROJECT_KEY = 'jenkins'
+    }
+
+    stages {
+        stage('Fetch Code') {
+            steps {
+                git branch: 'atom',
+                    url: 'https://github.com/hkhcoder/vprofile-project.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'mvn clean install -DskipTests'
+                archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('Checkstyle Analysis') {
+            steps {
+                sh 'mvn checkstyle:checkstyle'
+                echo '✅ Checkstyle report generated.'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonarserver') {
+                    sh '''
+                        sonar-scanner \
+                          -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                          -Dsonar.sources=src/ \
+                          -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
+                          -Dsonar.junit.reportPaths=target/surefire-reports/ \
+                          -Dsonar.jacoco.reportPaths=target/jacoco.exec \
+                          -Dsonar.checkstyle.reportPaths=target/checkstyle-result.xml
+                    '''
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Build, Test, and SonarQube Analysis completed successfully!'
+        }
+        failure {
+            echo '❌ Build failed or Quality Gate not passed!'
+        }
+    }
+}
+
+
+Step 8 — Run the Jenkins Job
+
+Create a new Pipeline Job
+
+Paste the Jenkinsfile (or use Jenkinsfile from SCM)
+
+Click Build Now
+
+Watch console output:
+
+You’ll see SonarQube scanner running
+
+Once complete, open SonarQube Dashboard
+
+Your project “jenkins” will appear 🎉
+
+-----------------------------------------------------------Set C: 
+
+
+
+
+
+
+

@@ -1,0 +1,20 @@
+terminal 1= 
+
+1.python3 -m venv my_ml
+(this is envornment name)
+2.source my_ml/bin/activate
+
+3.pip install mlflow
+
+4.pip install notebook
+5.jupiter notebook
+
+terminal 2=
+source my_ml/bin/activate
+
+ml flow documentation > open source> getting started>our frist mlflow model >notebook>logging frist
+
+go jupiter>python3>paste >run 
+
+teminal 3=>
+hyperparameter tuning>paste second command >comamnd3> copy paste all command in notebook>

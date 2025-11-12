@@ -1,0 +1,34 @@
+1.create two instance>ubuntu>t2 medium>security group specific
+2.join throw ssh
+installatio k8
+
+-------------
+
+k8-s
+step1= create name space(master)
+step2=worker
+stp3
+clone code on master cd k8-postgtess
+step4=master
+step5=master
+
+go worker node instance and copy public ip paste search bar :30007
+
+---------------
+
+k8 2 tier
+
+clone k8s-2-tier(master)
+ls
+cd k8-2-api
+kubectl get pods,svc,deploy,secret -n database-stack
+sudo apt install vim
+vim go-api-stack.yaml(change value to cluster ip)
+
+go how to apply command (paste on master)
+check deployment
+check pods
+---------------------
+postman
+add post> http://<worker public ip:30008>/posts>send
+all post> http://<worker public ip:30008>send
